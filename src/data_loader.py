@@ -69,4 +69,3 @@ def get_all_dataset_configs():
     
     return configs
 
-print(get_all_dataset_configs())
