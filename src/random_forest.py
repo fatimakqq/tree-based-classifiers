@@ -17,18 +17,16 @@ def train_random_forest(X_train, y_train, X_valid, y_valid, X_test, y_test):
     """
     # Define parameter grid
     param_grid = {
-        'n_estimators': [10, 50, 100],
-        'max_depth': [None, 10, 20, 30],
-        'min_samples_split': [2, 5, 10],
-        'min_samples_leaf': [1, 2, 4],
-        'max_features': ['sqrt', 'log2', None]
+    'n_estimators': [10],
+    'max_depth': [None, 10],
+    'max_features': ['sqrt']
     }
     
     # Create model
     rf_clf = RandomForestClassifier(random_state=42)
     
     # Perform grid search
-    grid_search = GridSearchCV(rf_clf, param_grid, cv=5, scoring='accuracy')
+    grid_search = GridSearchCV(rf_clf, param_grid, cv=5, scoring='accuracy', n_jobs=-1)
     grid_search.fit(X_train, y_train)
     
     # Get best parameters

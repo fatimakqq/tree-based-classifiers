@@ -18,18 +18,17 @@ def train_bagging(X_train, y_train, X_valid, y_valid, X_test, y_test):
     """
     # Define parameter grid
     param_grid = {
-        'n_estimators': [10, 50, 100],
-        'max_samples': [0.5, 0.7, 1.0],
-        'max_features': [0.5, 0.7, 1.0],
-        'base_estimator__max_depth': [None, 10, 20, 30]
+    'n_estimators': [10],
+    'estimator__max_depth': [None, 10]
     }
     
     # Create model
     base_estimator = DecisionTreeClassifier(random_state=42)
-    bagging_clf = BaggingClassifier(base_estimator=base_estimator, random_state=42)
+    # Use 'estimator' instead of 'base_estimator'
+    bagging_clf = BaggingClassifier(estimator=base_estimator, random_state=42)
     
     # Perform grid search
-    grid_search = GridSearchCV(bagging_clf, param_grid, cv=5, scoring='accuracy')
+    grid_search = GridSearchCV(bagging_clf, param_grid, cv=3, scoring='accuracy', n_jobs=-1)
     grid_search.fit(X_train, y_train)
     
     # Get best parameters
@@ -38,12 +37,13 @@ def train_bagging(X_train, y_train, X_valid, y_valid, X_test, y_test):
     # Combine training and validation sets
     X_combined, y_combined = combine_train_valid(X_train, y_train, X_valid, y_valid)
     
-    # Extract base_estimator params
-    base_estimator_depth = best_params.pop('base_estimator__max_depth')
+    # Extract estimator params
+    estimator_depth = best_params.pop('estimator__max_depth')  # Changed from base_estimator__max_depth
     
     # Retrain with best parameters on combined data
-    base_estimator = DecisionTreeClassifier(max_depth=base_estimator_depth, random_state=42)
-    best_model = BaggingClassifier(base_estimator=base_estimator, **best_params, random_state=42)
+    base_estimator = DecisionTreeClassifier(max_depth=estimator_depth, random_state=42)
+    # Use 'estimator' instead of 'base_estimator'
+    best_model = BaggingClassifier(estimator=base_estimator, **best_params, random_state=42)
     best_model.fit(X_combined, y_combined)
     
     # Evaluate on test set
@@ -51,8 +51,8 @@ def train_bagging(X_train, y_train, X_valid, y_valid, X_test, y_test):
     accuracy = accuracy_score(y_test, y_pred)
     f1 = f1_score(y_test, y_pred)
     
-    # Add base_estimator params back for reporting
-    best_params['base_estimator__max_depth'] = base_estimator_depth
+    # Add estimator params back for reporting
+    best_params['estimator__max_depth'] = estimator_depth  # Changed from base_estimator__max_depth
     
     return best_params, accuracy, f1
 

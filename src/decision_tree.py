@@ -17,18 +17,16 @@ def train_decision_tree(X_train, y_train, X_valid, y_valid, X_test, y_test):
     """
     # Define parameter grid
     param_grid = {
-        'criterion': ['gini', 'entropy'],
-        'splitter': ['best', 'random'],
-        'max_depth': [None, 10, 20, 30],
-        'min_samples_split': [2, 5, 10],
-        'min_samples_leaf': [1, 2, 4]
+        'criterion': ['gini'],
+        'max_depth': [None, 10],
+        'min_samples_split': [2]
     }
     
     # Create model
     dt_clf = DecisionTreeClassifier(random_state=42)
     
     # Perform grid search
-    grid_search = GridSearchCV(dt_clf, param_grid, cv=5, scoring='accuracy')
+    grid_search = GridSearchCV(dt_clf, param_grid, cv=3, scoring='accuracy', n_jobs=-1)
     grid_search.fit(X_train, y_train)
     
     # Get best parameters

@@ -1,0 +1,5 @@
+classifier,accuracy
+decision_tree,0.8809
+bagging,0.9619
+random_forest,0.967
+gradient_boosting,0.9652

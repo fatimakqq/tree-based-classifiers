@@ -53,7 +53,7 @@ def train_bagging_mnist(X_train, y_train, X_test, y_test):
     print("Training Bagging on MNIST...")
     base_estimator = DecisionTreeClassifier(max_depth=20, random_state=42)
     clf = BaggingClassifier(
-        base_estimator=base_estimator,
+        estimator=base_estimator,  # Change from base_estimator to estimator
         n_estimators=50,
         max_samples=0.5,
         max_features=0.5,

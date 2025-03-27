@@ -17,18 +17,16 @@ def train_gradient_boosting(X_train, y_train, X_valid, y_valid, X_test, y_test):
     """
     # Define parameter grid
     param_grid = {
-        'n_estimators': [50, 100, 200],
-        'learning_rate': [0.01, 0.1, 0.2],
-        'max_depth': [3, 5, 7],
-        'min_samples_split': [2, 5, 10],
-        'subsample': [0.7, 0.8, 1.0]
+    'n_estimators': [50],
+    'learning_rate': [0.1],
+    'max_depth': [3, 5]
     }
     
     # Create model
     gb_clf = GradientBoostingClassifier(random_state=42)
     
     # Perform grid search
-    grid_search = GridSearchCV(gb_clf, param_grid, cv=5, scoring='accuracy')
+    grid_search = GridSearchCV(gb_clf, param_grid, cv=3, scoring='accuracy', n_jobs=-1)
     grid_search.fit(X_train, y_train)
     
     # Get best parameters
