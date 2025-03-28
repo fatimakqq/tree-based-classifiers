@@ -1,10 +1,10 @@
 import os
 import pandas as pd
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import BaggingClassifier, RandomForestClassifier, GradientBoostingClassifier
-from sklearn.metrics import accuracy_score, f1_score
-from sklearn.model_selection import GridSearchCV
-from sklearn.datasets import fetch_openml
+from decision_tree import run_dt
+from bagging import run_bagging
+from random_forest import run_rf
+from gradient_boosting import run_gb
+from mnist import run_mnist
 
 # Data loading functions
 def load_dataset(clause_count, data_size, data_dir="data"):
@@ -19,13 +19,22 @@ def load_dataset(clause_count, data_size, data_dir="data"):
     valid_data = pd.read_csv(valid_file, header=None)
     test_data = pd.read_csv(test_file, header=None)
     
-    # Split features and labels
-    X_train = train_data.iloc[:, :-1]
-    y_train = train_data.iloc[:, -1]
-    X_valid = valid_data.iloc[:, :-1]
-    y_valid = valid_data.iloc[:, -1]
-    X_test = test_data.iloc[:, :-1]
-    y_test = test_data.iloc[:, -1]
+    # Split features and labels in a more explicit way
+    # For training data
+    num_columns = len(train_data.columns)
+    feature_columns = list(range(0, num_columns - 1))  # All columns except the last one
+    label_column = num_columns - 1  # The last column
+    
+    X_train = train_data.iloc[:, feature_columns]  # Select all features (all columns except the last)
+    y_train = train_data.iloc[:, label_column]     # Select the label (last column)
+    
+    # For validation data
+    X_valid = valid_data.iloc[:, feature_columns]  # Select all features
+    y_valid = valid_data.iloc[:, label_column]     # Select the label
+    
+    # For test data
+    X_test = test_data.iloc[:, feature_columns]    # Select all features
+    y_test = test_data.iloc[:, label_column]       # Select the label
     
     return X_train, y_train, X_valid, y_valid, X_test, y_test
 
@@ -48,6 +57,24 @@ def get_all_dataset_configs():
     return configs
 
 # Results handling functions
+def merge_results(dt_results, bag_results, rf_results, gb_results):
+    """Merge results from different classifiers."""
+    # Merge accuracy results
+    accuracy_results = {'dataset': dt_results[0]['dataset']}
+    accuracy_results['decision_tree'] = dt_results[0]['decision_tree']
+    accuracy_results['bagging'] = bag_results[0]['bagging']
+    accuracy_results['random_forest'] = rf_results[0]['random_forest']
+    accuracy_results['gradient_boosting'] = gb_results[0]['gradient_boosting']
+    
+    # Merge F1 results
+    f1_results = {'dataset': dt_results[1]['dataset']}
+    f1_results['decision_tree'] = dt_results[1]['decision_tree']
+    f1_results['bagging'] = bag_results[1]['bagging']
+    f1_results['random_forest'] = rf_results[1]['random_forest']
+    f1_results['gradient_boosting'] = gb_results[1]['gradient_boosting']
+    
+    return accuracy_results, f1_results
+
 def process_results(accuracy_results, f1_results):
     """Process and print results."""
     # Convert to DataFrames for easier processing
@@ -72,24 +99,6 @@ def process_results(accuracy_results, f1_results):
     for col in f1_df.columns:
         if col != 'dataset':
             print(f"{col}: mean={f1_df[col].mean():.4f}, min={f1_df[col].min():.4f}, max={f1_df[col].max():.4f}")
-
-def merge_results(dt_results, bag_results, rf_results, gb_results):
-    """Merge results from different classifiers."""
-    # Merge accuracy results
-    accuracy_results = {'dataset': dt_results[0]['dataset']}
-    accuracy_results['decision_tree'] = dt_results[0]['decision_tree']
-    accuracy_results['bagging'] = bag_results[0]['bagging']
-    accuracy_results['random_forest'] = rf_results[0]['random_forest']
-    accuracy_results['gradient_boosting'] = gb_results[0]['gradient_boosting']
-    
-    # Merge F1 results
-    f1_results = {'dataset': dt_results[1]['dataset']}
-    f1_results['decision_tree'] = dt_results[1]['decision_tree']
-    f1_results['bagging'] = bag_results[1]['bagging']
-    f1_results['random_forest'] = rf_results[1]['random_forest']
-    f1_results['gradient_boosting'] = gb_results[1]['gradient_boosting']
-    
-    return accuracy_results, f1_results
 
 def print_summary(accuracy_results, f1_results):
     """Print a summary of results."""
@@ -120,322 +129,6 @@ def print_summary(accuracy_results, f1_results):
         best_clf = classifiers[best_idx]
         print(f"{dataset}: {best_clf} ({accuracies[best_idx]:.4f})")
 
-# Classifier experiment functions
-def run_dt():
-    """Run Decision Tree experiments on all datasets."""
-    # Initialize results dictionaries
-    accuracy_results = {'dataset': []}
-    f1_results = {'dataset': []}
-    
-    # Get all dataset configs
-    configs = get_all_dataset_configs()
-    
-    for clause_count, data_size in configs:
-        dataset_name = f"c{clause_count}_d{data_size}"
-        accuracy_results['dataset'].append(dataset_name)
-        f1_results['dataset'].append(dataset_name)
-        
-        print(f"Running Decision Tree on dataset {dataset_name}")
-        
-        # Load data
-        X_train, y_train, X_valid, y_valid, X_test, y_test = load_dataset(clause_count, data_size)
-        
-        # Define parameter grid
-        param_grid = {
-            'criterion': ['gini'],
-            'max_depth': [None, 10],
-            'min_samples_split': [2]
-        }
-        
-        # Create and tune the model
-        dt_clf = DecisionTreeClassifier(random_state=42)
-        grid_search = GridSearchCV(dt_clf, param_grid, cv=3, scoring='accuracy', n_jobs=-1)
-        grid_search.fit(X_train, y_train)
-        
-        # Get best parameters
-        best_params = grid_search.best_params_
-        
-        # Combine training and validation sets
-        X_combined, y_combined = combine_train_valid(X_train, y_train, X_valid, y_valid)
-        
-        # Train with best parameters
-        best_model = DecisionTreeClassifier(**best_params, random_state=42)
-        best_model.fit(X_combined, y_combined)
-        
-        # Evaluate on test set
-        y_pred = best_model.predict(X_test)
-        accuracy = accuracy_score(y_test, y_pred)
-        f1 = f1_score(y_test, y_pred)
-        
-        # Store results
-        if 'decision_tree' not in accuracy_results:
-            accuracy_results['decision_tree'] = []
-            f1_results['decision_tree'] = []
-            
-        accuracy_results['decision_tree'].append(accuracy)
-        f1_results['decision_tree'].append(f1)
-        
-        print(f"  Best params: {best_params}")
-        print(f"  Accuracy: {accuracy:.4f}, F1: {f1:.4f}")
-    
-    return accuracy_results, f1_results
-
-def run_bagging():
-    """Run Bagging experiments on all datasets."""
-    # Initialize results dictionaries
-    accuracy_results = {'dataset': []}
-    f1_results = {'dataset': []}
-    
-    # Get all dataset configs
-    configs = get_all_dataset_configs()
-    
-    for clause_count, data_size in configs:
-        dataset_name = f"c{clause_count}_d{data_size}"
-        accuracy_results['dataset'].append(dataset_name)
-        f1_results['dataset'].append(dataset_name)
-        
-        print(f"Running Bagging on dataset {dataset_name}")
-        
-        # Load data
-        X_train, y_train, X_valid, y_valid, X_test, y_test = load_dataset(clause_count, data_size)
-        
-        # Define parameter grid
-        param_grid = {
-            'n_estimators': [10],
-            'estimator__max_depth': [None, 10]
-        }
-        
-        # Create model
-        base_estimator = DecisionTreeClassifier(random_state=42)
-        bagging_clf = BaggingClassifier(estimator=base_estimator, random_state=42)
-        
-        # Perform grid search
-        grid_search = GridSearchCV(bagging_clf, param_grid, cv=3, scoring='accuracy', n_jobs=-1)
-        grid_search.fit(X_train, y_train)
-        
-        # Get best parameters
-        best_params = grid_search.best_params_
-        
-        # Combine training and validation sets
-        X_combined, y_combined = combine_train_valid(X_train, y_train, X_valid, y_valid)
-        
-        # Extract estimator params
-        estimator_depth = best_params.pop('estimator__max_depth')
-        
-        # Retrain with best parameters on combined data
-        base_estimator = DecisionTreeClassifier(max_depth=estimator_depth, random_state=42)
-        best_model = BaggingClassifier(estimator=base_estimator, **best_params, random_state=42)
-        best_model.fit(X_combined, y_combined)
-        
-        # Evaluate on test set
-        y_pred = best_model.predict(X_test)
-        accuracy = accuracy_score(y_test, y_pred)
-        f1 = f1_score(y_test, y_pred)
-        
-        # Add estimator params back for reporting
-        best_params['estimator__max_depth'] = estimator_depth
-        
-        # Store results
-        if 'bagging' not in accuracy_results:
-            accuracy_results['bagging'] = []
-            f1_results['bagging'] = []
-            
-        accuracy_results['bagging'].append(accuracy)
-        f1_results['bagging'].append(f1)
-        
-        print(f"  Best params: {best_params}")
-        print(f"  Accuracy: {accuracy:.4f}, F1: {f1:.4f}")
-    
-    return accuracy_results, f1_results
-
-def run_rf():
-    """Run Random Forest experiments on all datasets."""
-    # Initialize results dictionaries
-    accuracy_results = {'dataset': []}
-    f1_results = {'dataset': []}
-    
-    # Get all dataset configs
-    configs = get_all_dataset_configs()
-    
-    for clause_count, data_size in configs:
-        dataset_name = f"c{clause_count}_d{data_size}"
-        accuracy_results['dataset'].append(dataset_name)
-        f1_results['dataset'].append(dataset_name)
-        
-        print(f"Running Random Forest on dataset {dataset_name}")
-        
-        # Load data
-        X_train, y_train, X_valid, y_valid, X_test, y_test = load_dataset(clause_count, data_size)
-        
-        # Define parameter grid
-        param_grid = {
-            'n_estimators': [10],
-            'max_depth': [None, 10],
-            'max_features': ['sqrt']
-        }
-        
-        # Create and tune the model
-        rf_clf = RandomForestClassifier(random_state=42)
-        grid_search = GridSearchCV(rf_clf, param_grid, cv=3, scoring='accuracy', n_jobs=-1)
-        grid_search.fit(X_train, y_train)
-        
-        # Get best parameters
-        best_params = grid_search.best_params_
-        
-        # Combine training and validation sets
-        X_combined, y_combined = combine_train_valid(X_train, y_train, X_valid, y_valid)
-        
-        # Retrain with best parameters on combined data
-        best_model = RandomForestClassifier(**best_params, random_state=42)
-        best_model.fit(X_combined, y_combined)
-        
-        # Evaluate on test set
-        y_pred = best_model.predict(X_test)
-        accuracy = accuracy_score(y_test, y_pred)
-        f1 = f1_score(y_test, y_pred)
-        
-        # Store results
-        if 'random_forest' not in accuracy_results:
-            accuracy_results['random_forest'] = []
-            f1_results['random_forest'] = []
-            
-        accuracy_results['random_forest'].append(accuracy)
-        f1_results['random_forest'].append(f1)
-        
-        print(f"  Best params: {best_params}")
-        print(f"  Accuracy: {accuracy:.4f}, F1: {f1:.4f}")
-    
-    return accuracy_results, f1_results
-
-def run_gb():
-    """Run Gradient Boosting experiments on all datasets."""
-    # Initialize results dictionaries
-    accuracy_results = {'dataset': []}
-    f1_results = {'dataset': []}
-    
-    # Get all dataset configs
-    configs = get_all_dataset_configs()
-    
-    for clause_count, data_size in configs:
-        dataset_name = f"c{clause_count}_d{data_size}"
-        accuracy_results['dataset'].append(dataset_name)
-        f1_results['dataset'].append(dataset_name)
-        
-        print(f"Running Gradient Boosting on dataset {dataset_name}")
-        
-        # Load data
-        X_train, y_train, X_valid, y_valid, X_test, y_test = load_dataset(clause_count, data_size)
-        
-        # Define parameter grid
-        param_grid = {
-            'n_estimators': [50],
-            'learning_rate': [0.1],
-            'max_depth': [3, 5]
-        }
-        
-        # Create and tune the model
-        gb_clf = GradientBoostingClassifier(random_state=42)
-        grid_search = GridSearchCV(gb_clf, param_grid, cv=3, scoring='accuracy', n_jobs=-1)
-        grid_search.fit(X_train, y_train)
-        
-        # Get best parameters
-        best_params = grid_search.best_params_
-        
-        # Combine training and validation sets
-        X_combined, y_combined = combine_train_valid(X_train, y_train, X_valid, y_valid)
-        
-        # Retrain with best parameters on combined data
-        best_model = GradientBoostingClassifier(**best_params, random_state=42)
-        best_model.fit(X_combined, y_combined)
-        
-        # Evaluate on test set
-        y_pred = best_model.predict(X_test)
-        accuracy = accuracy_score(y_test, y_pred)
-        f1 = f1_score(y_test, y_pred)
-        
-        # Store results
-        if 'gradient_boosting' not in accuracy_results:
-            accuracy_results['gradient_boosting'] = []
-            f1_results['gradient_boosting'] = []
-            
-        accuracy_results['gradient_boosting'].append(accuracy)
-        f1_results['gradient_boosting'].append(f1)
-        
-        print(f"  Best params: {best_params}")
-        print(f"  Accuracy: {accuracy:.4f}, F1: {f1:.4f}")
-    
-    return accuracy_results, f1_results
-
-def run_mnist():
-    """Run experiments on MNIST dataset."""
-    print("Loading MNIST dataset...")
-    X, y = fetch_openml('mnist_784', version=1, return_X_y=True, parser='auto')
-    X = X / 255.0  # Normalize pixel values to [0,1]
-    
-    # Split into training and test sets
-    X_train, X_test = X[:60000], X[60000:]
-    y_train, y_test = y[:60000], y[60000:]
-    
-    # Use a smaller subset for faster training
-    X_train = X_train[:5000]
-    y_train = y_train[:5000]
-    
-    results = {'classifier': [], 'accuracy': []}
-    
-    # Decision Tree
-    print("Training Decision Tree on MNIST...")
-    dt_clf = DecisionTreeClassifier(max_depth=20, random_state=42)
-    dt_clf.fit(X_train, y_train)
-    dt_accuracy = accuracy_score(y_test, dt_clf.predict(X_test))
-    results['classifier'].append('decision_tree')
-    results['accuracy'].append(dt_accuracy)
-    print(f"Decision Tree accuracy: {dt_accuracy:.4f}")
-    
-    # Bagging
-    print("Training Bagging on MNIST...")
-    base_estimator = DecisionTreeClassifier(max_depth=20, random_state=42)
-    bagging_clf = BaggingClassifier(
-        estimator=base_estimator,
-        n_estimators=10,
-        max_samples=0.5,
-        random_state=42
-    )
-    bagging_clf.fit(X_train, y_train)
-    bagging_accuracy = accuracy_score(y_test, bagging_clf.predict(X_test))
-    results['classifier'].append('bagging')
-    results['accuracy'].append(bagging_accuracy)
-    print(f"Bagging accuracy: {bagging_accuracy:.4f}")
-    
-    # Random Forest
-    print("Training Random Forest on MNIST...")
-    rf_clf = RandomForestClassifier(
-        n_estimators=10,
-        max_depth=20,
-        random_state=42
-    )
-    rf_clf.fit(X_train, y_train)
-    rf_accuracy = accuracy_score(y_test, rf_clf.predict(X_test))
-    results['classifier'].append('random_forest')
-    results['accuracy'].append(rf_accuracy)
-    print(f"Random Forest accuracy: {rf_accuracy:.4f}")
-    
-    # Gradient Boosting
-    print("Training Gradient Boosting on MNIST...")
-    gb_clf = GradientBoostingClassifier(
-        n_estimators=50,
-        learning_rate=0.1,
-        max_depth=5,
-        random_state=42
-    )
-    gb_clf.fit(X_train, y_train)
-    gb_accuracy = accuracy_score(y_test, gb_clf.predict(X_test))
-    results['classifier'].append('gradient_boosting')
-    results['accuracy'].append(gb_accuracy)
-    print(f"Gradient Boosting accuracy: {gb_accuracy:.4f}")
-    
-    return results
-
-# Main function
 def main():
     # Part 1-4: Run experiments on Boolean formula datasets
     print("="*50)
