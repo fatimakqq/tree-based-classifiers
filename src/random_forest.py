@@ -46,7 +46,7 @@ def train_random_forest(X_train, y_train, X_valid, y_valid, X_test, y_test):
     
     return best_params, accuracy, f1
 
-def run_random_forest_experiments():
+def run_rf():
     """
     Run Random Forest experiments on all datasets.
     

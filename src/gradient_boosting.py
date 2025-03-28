@@ -46,7 +46,7 @@ def train_gradient_boosting(X_train, y_train, X_valid, y_valid, X_test, y_test):
     
     return best_params, accuracy, f1
 
-def run_gradient_boosting_experiments():
+def run_gb():
     """
     Run Gradient Boosting experiments on all datasets.
     

@@ -110,7 +110,7 @@ def train_gradient_boosting_mnist(X_train, y_train, X_test, y_test):
     print(f"Gradient Boosting accuracy: {accuracy:.4f}")
     return accuracy
 
-def run_mnist_experiments():
+def run_mnist():
     """
     Run all classifier experiments on MNIST dataset.
     

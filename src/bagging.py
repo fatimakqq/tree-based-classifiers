@@ -56,7 +56,7 @@ def train_bagging(X_train, y_train, X_valid, y_valid, X_test, y_test):
     
     return best_params, accuracy, f1
 
-def run_bagging_experiments():
+def run_bagging():
     """
     Run Bagging experiments on all datasets.
     

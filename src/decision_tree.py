@@ -46,7 +46,7 @@ def train_decision_tree(X_train, y_train, X_valid, y_valid, X_test, y_test):
     
     return best_params, accuracy, f1
 
-def run_decision_tree_experiments():
+def run_dt():
     """
     Run Decision Tree experiments on all datasets.
     
