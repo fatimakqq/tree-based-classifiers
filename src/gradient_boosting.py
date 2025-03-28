@@ -1,7 +1,7 @@
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import accuracy_score, f1_score
-from main import load_dataset, combine_train_valid, get_all_dataset_configs
+from src.utils import load_dataset, combine_train_valid, get_all_dataset_configs
 
 def run_gb():
     """Run Gradient Boosting experiments on all datasets."""

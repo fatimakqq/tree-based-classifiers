@@ -1,10 +1,6 @@
+# utilities.py
 import os
 import pandas as pd
-from src.decision_tree import run_dt
-from src.bagging import run_bagging
-from src.random_forest import run_rf
-from src.gradient_boosting import run_gb
-from src.mnist import run_mnist
 
 # Data loading functions
 def load_dataset(clause_count, data_size, data_dir="data"):
@@ -25,8 +21,8 @@ def load_dataset(clause_count, data_size, data_dir="data"):
     feature_columns = list(range(0, num_columns - 1))  # All columns except the last one
     label_column = num_columns - 1  # The last column
     
-    X_train = train_data.iloc[:, feature_columns]  # Select all features (all columns except the last)
-    y_train = train_data.iloc[:, label_column]     # Select the label (last column)
+    X_train = train_data.iloc[:, feature_columns]  # Select all features
+    y_train = train_data.iloc[:, label_column]     # Select the label
     
     # For validation data
     X_valid = valid_data.iloc[:, feature_columns]  # Select all features
@@ -128,54 +124,3 @@ def print_summary(accuracy_results, f1_results):
         best_idx = accuracies.index(max(accuracies))
         best_clf = classifiers[best_idx]
         print(f"{dataset}: {best_clf} ({accuracies[best_idx]:.4f})")
-
-def main():
-    # Part 1-4: Run experiments on Boolean formula datasets
-    print("="*50)
-    print("Running experiments on Boolean formula datasets")
-    print("="*50)
-    
-    # Run Decision Tree experiments
-    print("\nRunning Decision Tree experiments...")
-    dt_results = run_dt()
-    
-    # Run Bagging experiments
-    print("\nRunning Bagging experiments...")
-    bag_results = run_bagging()
-    
-    # Run Random Forest experiments
-    print("\nRunning Random Forest experiments...")
-    rf_results = run_rf()
-    
-    # Run Gradient Boosting experiments
-    print("\nRunning Gradient Boosting experiments...")
-    gb_results = run_gb()
-    
-    # Merge and process results
-    print("\nProcessing Boolean formula dataset results...")
-    accuracy_results, f1_results = merge_results(dt_results, bag_results, rf_results, gb_results)
-    process_results(accuracy_results, f1_results)
-    
-    # Print summary
-    print("\nBoolean Formula Dataset Results Summary:")
-    print_summary(accuracy_results, f1_results)
-    
-    # Part 6: Run experiments on MNIST dataset
-    print("\n" + "="*50)
-    print("Running experiments on MNIST dataset")
-    print("="*50)
-    
-    mnist_results = run_mnist()
-    
-    # Print MNIST summary
-    print("\nMNIST Results Summary:")
-    mnist_df = pd.DataFrame(mnist_results)
-    print(mnist_df.to_string(index=False))
-    
-    # Identify best classifier
-    best_idx = mnist_results['accuracy'].index(max(mnist_results['accuracy']))
-    best_clf = mnist_results['classifier'][best_idx]
-    print(f"\nBest classifier on MNIST: {best_clf} with accuracy {mnist_results['accuracy'][best_idx]:.4f}")
-
-if __name__ == "__main__":
-    main()
