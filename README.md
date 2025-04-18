@@ -1,4 +1,4 @@
-# Comparing different tree based classifiers for ML proj 2
+# Comparing different tree based classifiers
 
 ## Running instructions
 pip install -r requirements.txt
